@@ -1,34 +1,67 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Snapshot.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
+contract Metrik is ERC20, ERC20Burnable, ERC20Snapshot, Ownable, ERC20Permit, ERC20Votes 
+{
 
-contract Metrik is ERC20, ERC20Burnable, Ownable {
-
-    constructor() ERC20("Metrik", "MTN") {
+   
+    constructor() ERC20("Metrik", "MTN") ERC20Permit("Metrik") {
         _mint(msg.sender, 1000000000 * 10 ** decimals());
+    }
+
+    function snapshot() public onlyOwner {
+        _snapshot();
     }
 
     function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);
     }
 
-     // freeze the assets of account
-  function freezeAccount (address target, bool freeze) public onlyOwner {
+    // The following functions are overrides required by Solidity.
+
+    function _beforeTokenTransfer(address from, address to, uint256 amount)
+        internal
+        override(ERC20, ERC20Snapshot)
+    {
+        super._beforeTokenTransfer(from, to, amount);
+    }
+
+    function _afterTokenTransfer(address from, address to, uint256 amount)
+        internal
+        override(ERC20, ERC20Votes)
+    {
+        super._afterTokenTransfer(from, to, amount);
+    }
+
+    function _mint(address to, uint256 amount)
+        internal
+        override(ERC20, ERC20Votes)
+    {
+        super._mint(to, amount);
+    }
+
+    function _burn(address account, uint256 amount)
+        internal
+        override(ERC20, ERC20Votes)
+    {
+        super._burn(account, amount);
+    }
+    
+    function freezeAccount (address target, bool freeze) public onlyOwner {
         frozenAccount[target] = freeze;
         emit FrozenFunds(target, freeze);
-  }
-  // transfer and freeze the assets
-  
-  function transferAndFreeze (address recipient, uint256 amount) public onlyOwner {
+    }
+    function transferAndFreeze (address recipient, uint256 amount) public onlyOwner {
     
     _transfer(_msgSender(), recipient, amount);
     frozenAccount[recipient] = true;
     emit FrozenFunds(recipient, true);
   }
-  
-
 }
